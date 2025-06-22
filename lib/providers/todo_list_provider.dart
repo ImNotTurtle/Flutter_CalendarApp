@@ -1,74 +1,152 @@
 import 'package:calendar_app/data/todos.dart';
-import 'package:calendar_app/models/todo.dart';
+import 'package:calendar_app/models/recurring_todo.dart';
+import 'package:calendar_app/models/single_todo.dart';
+import 'package:calendar_app/models/todo_instance.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/base_todo.dart'; // <<< THAY ĐỔI: Import file model mới
 
-class TodosNotifier extends StateNotifier<List<Todo>> {
-  TodosNotifier() : super(todosData);
+// --- DỮ LIỆU MẪU MỚI ---
 
-  void addTodo(String title, String content, DateTime date) {
-    state = [...state, Todo(title: title, content: content, date: date)];
+// <<< THAY ĐỔI: Notifier giờ quản lý List<BaseTodo> >>>
+class TodosNotifier extends StateNotifier<List<BaseTodo>> {
+  TodosNotifier() : super(sampleTodos);
+
+  // Các phương thức thêm/sửa/xóa cần được cập nhật để làm việc với BaseTodo
+  void addTodo(BaseTodo todo) {
+    state = [...state, todo];
   }
 
-  void updateTodo(Todo updatedTodo) {
+  void updateTodo(BaseTodo todo) {
     state = [
-      for (final todo in state)
-        if (todo.id == updatedTodo.id) updatedTodo else todo,
+      for (final t in state)
+        if (t.id == todo.id) todo else t,
     ];
   }
 
-  void deleteTodo(String id){
-    state = state.where((todo) => todo.id != id).toList();
+  void removeTodo(String todoId) {
+    state = state.where((t) => t.id != todoId).toList();
   }
 
-  void deleteMultipleTodos(Set<String> idsToDelete) {
-    state = state.where((todo) => !idsToDelete.contains(todo.id)).toList();
-  }
-
+  // Toggle chỉ hoạt động với SingleTodo
   void toggle(String todoId) {
     state = [
-      for (final todo in state)
-        if (todo.id == todoId)
-          todo.copyWith(isCompleted: !todo.isCompleted)
+      for (final t in state)
+        if (t.id == todoId && t is SingleTodo)
+          SingleTodo(
+            id: t.id,
+            title: t.title,
+            content: t.content,
+            dateTime: t.dateTime,
+            isCompleted: !t.isCompleted,
+          )
         else
-          todo,
+          t,
     ];
   }
 }
 
-final todosProvider = StateNotifierProvider<TodosNotifier, List<Todo>>((ref) {
+final todosProvider = StateNotifierProvider<TodosNotifier, List<BaseTodo>>((
+  ref,
+) {
   return TodosNotifier();
 });
 
-// Provider này giữ khoảng ngày (start, end) mà người dùng chọn trên lịch
-// Dùng StateProvider vì nó đơn giản và chỉ giữ một giá trị duy nhất.
 final selectedDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
 
-// Provider này sẽ trả về danh sách các công việc đã được lọc
-// Nó sẽ "lắng nghe" cả danh sách gốc (todosProvider) và khoảng ngày được chọn
-// (selectedDateRangeProvider) để tự động cập nhật.
-final filteredTodosProvider = Provider<List<Todo>>((ref) {
-  // Lắng nghe sự thay đổi từ 2 provider khác
-  final allTodos = ref.watch(todosProvider);
+// <<< Provider để lưu ngày đầu tiên của tuần đang hiển thị >>>
+// Mặc định là ngày hôm nay
+final displayedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
+// final calendarViewProvider = StateProvider<CalendarView>(
+//   (ref) => CalendarView.day,
+// );
+
+// <<< Provider chịu trách nhiệm quản lý những todo instance nào sẽ hiển thị
+final visibleInstancesProvider = Provider<List<TodoInstance>>((ref) {
+  final allTodoRules = ref.watch(todosProvider);
   final selectedRange = ref.watch(selectedDateRangeProvider);
 
-  // Nếu không có ngày nào được chọn, trả về danh sách rỗng
+  // Mặc định, nếu không có gì được chọn, hiển thị cho ngày hôm nay
+  final DateTimeRange rangeToFilter;
   if (selectedRange == null) {
-    return allTodos;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    rangeToFilter = DateTimeRange(start: today, end: today);
+  } else {
+    rangeToFilter = selectedRange;
   }
-  // Lọc và trả về danh sách công việc có ngày nằm trong khoảng đã chọn
-  return allTodos.where((todo) {
-    // Chuẩn hóa ngày về 0h:00 để so sánh chỉ dựa trên ngày, không tính giờ
-    final todoDate = todo.dateNormalized;
-    final startDate = DateTime(selectedRange.start.year, selectedRange.start.month, selectedRange.start.day);
-    final endDate = DateTime(selectedRange.end.year, selectedRange.end.month, selectedRange.end.day);
 
-    return (todoDate.isAtSameMomentAs(startDate) || todoDate.isAfter(startDate)) &&
-           (todoDate.isAtSameMomentAs(endDate) || todoDate.isBefore(endDate));
-  }).toList();
+  // Logic tạo instance giữ nguyên, nó sẽ hoạt động cho bất kỳ khoảng ngày nào
+  final List<TodoInstance> instances = [];
+  final rangeStart = rangeToFilter.start;
+  final rangeEnd = rangeToFilter.end;
+
+  for (final todoRule in allTodoRules) {
+    // Trường hợp 1: Là sự kiện đơn lẻ
+    if (todoRule is SingleTodo) {
+      // Dùng dateNormalized để so sánh không tính giờ
+      final todoDate = DateTime.utc(
+        todoRule.dateTime.year,
+        todoRule.dateTime.month,
+        todoRule.dateTime.day,
+      );
+      if (!todoDate.isBefore(rangeStart) &&
+          todoDate.isBefore(rangeEnd.add(const Duration(days: 1)))) {
+        instances.add(
+          TodoInstance(
+            originalId: todoRule.id,
+            title: todoRule.title,
+            content: todoRule.content,
+            concreteDateTime: todoRule.dateTime,
+            isRecurring: false,
+            isCompleted: todoRule.isCompleted,
+          ),
+        );
+      }
+    }
+    // Trường hợp 2: Là "luật" lặp lại
+    else if (todoRule is RecurringTodoRule) {
+      for (
+        var day = rangeStart;
+        day.isBefore(rangeEnd.add(const Duration(days: 1)));
+        day = day.add(const Duration(days: 1))
+      ) {
+        if (todoRule.daysOfWeek.contains(day.weekday)) {
+          final concreteDateTime = DateTime(
+            day.year,
+            day.month,
+            day.day,
+            todoRule.timeOfDay.hour,
+            todoRule.timeOfDay.minute,
+          );
+          instances.add(
+            TodoInstance(
+              originalId: todoRule.id,
+              title: todoRule.title,
+              content: todoRule.content,
+              concreteDateTime: concreteDateTime,
+              isRecurring: true,
+              isCompleted: null,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  instances.sort((a, b) => a.concreteDateTime.compareTo(b.concreteDateTime));
+  return instances;
 });
 
-
-//Provider dùng để truy vấn nhanh theo ID
-// Dùng Set để tránh trùng lặp và truy vấn nhanh
+// Provider này giờ sẽ lưu ID của BaseTodo (cả Single và Recurring)
 final selectedTodosProvider = StateProvider<Set<String>>((ref) => {});
+
+
+final todoByIdProvider = Provider.family<BaseTodo?, String>((ref, todoId) {
+  // Lắng nghe danh sách todo gốc
+  final allTodos = ref.watch(todosProvider);
+  
+  // Dùng firstWhereOrNull để tìm. Nó sẽ trả về null nếu không tìm thấy.
+  return allTodos.firstWhereOrNull((todo) => todo.id == todoId);
+});

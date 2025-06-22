@@ -1,4 +1,5 @@
 import 'package:calendar_app/providers/todo_list_provider.dart';
+import 'package:calendar_app/shared_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -12,25 +13,26 @@ class CalendarWidget extends ConsumerWidget {
     final selectedRange = ref.watch(selectedDateRangeProvider);
 
     // Định nghĩa các màu sắc để dễ quản lý
-    const Color startColor = Colors.lightGreen;
+    const Color startColor = Colors.purpleAccent;
     const Color endColor = Colors.purpleAccent;
+    const Color todayColor = Colors.blue;
     const Color singleDayColor = Colors.amber;
-    final Color rangeHighlightColor = Colors.purple.withValues(alpha: 0.15);
+    final Color rangeHighlightColor = Colors.purple.withValues(alpha: 0.25);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TableCalendar(
           locale: 'vi_VN',
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
-          focusedDay:
-              selectedRange?.start ?? DateTime.now(), // Focus vào ngày đã chọn
-          rangeSelectionMode: RangeSelectionMode.toggledOn,
+          firstDay: kStartDate,
+          lastDay: kEndDate,
+          focusedDay: selectedRange?.start ?? DateTime.now(),
           rangeStartDay: selectedRange?.start,
           rangeEndDay: selectedRange?.end,
+          rangeSelectionMode: RangeSelectionMode.toggledOn,
+          // <<< Logic khi người dùng chọn ngày >>>
           onRangeSelected: (start, end, focusedDay) {
-            print('selected range: ${start?.toLocal()} to ${end?.toLocal()}');
+            // Cập nhật khoảng ngày đã chọn
             ref.read(selectedDateRangeProvider.notifier).state = DateTimeRange(
               start: start!,
               end: end ?? start,
@@ -51,7 +53,7 @@ class CalendarWidget extends ConsumerWidget {
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Colors.orangeAccent.withValues(alpha: 0.5),
+              color: todayColor,
               shape: BoxShape.circle,
             ),
             outsideDaysVisible: false,
@@ -112,19 +114,14 @@ class CalendarWidget extends ConsumerWidget {
         // PHẦN CHÚ THÍCH BÊN DƯỚI
         Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 8.0),
-          child:
-           Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             spacing: 16.0, // Khoảng cách ngang giữa các mục
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ColorLegendItem(color: startColor, text: 'Bắt đầu'),
-              _ColorLegendItem(color: endColor, text: 'Kết thúc'),
+              _ColorLegendItem(color: startColor, text: 'Khoảng thời gian'),
               _ColorLegendItem(color: singleDayColor, text: 'Chỉ 1 ngày'),
-              _ColorLegendItem(
-                color: Colors.orangeAccent.withValues(alpha: 0.5),
-                text: 'Hôm nay',
-              ),
+              _ColorLegendItem(color: todayColor, text: 'Hôm nay'),
             ],
           ),
         ),
