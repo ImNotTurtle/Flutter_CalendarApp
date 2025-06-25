@@ -43,6 +43,7 @@ dependencies:
   syncfusion_flutter_calendar: ^26.1.42
   collection: ^1.18.0
   local_notifier: ^0.1.6
+  supabase_flutter: ^2.5.8
 
 dev_dependencies:
   flutter_test:

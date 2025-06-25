@@ -1,5 +1,5 @@
 import 'package:calendar_app/models/todo_instance.dart';
-import 'package:calendar_app/providers/todo_list_provider.dart';
+import 'package:calendar_app/providers/todo_provider.dart';
 import 'package:calendar_app/screens/add_edit_todo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,7 +1,8 @@
 import 'package:calendar_app/models/base_todo.dart';
+import 'package:calendar_app/models/day_of_week.dart';
 import 'package:calendar_app/models/recurring_todo.dart';
 import 'package:calendar_app/models/single_todo.dart';
-import 'package:calendar_app/providers/todo_list_provider.dart';
+import 'package:calendar_app/providers/todo_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -12,13 +13,11 @@ class AddEditTodoScreen extends ConsumerStatefulWidget {
   final bool isAddForm;
 
   // Constructor cho việc thêm mới: không cần todo
-  const AddEditTodoScreen.add({super.key})
-      : isAddForm = true,
-        todo = null;
+  const AddEditTodoScreen.add({super.key}) : isAddForm = true, todo = null;
 
   // Constructor cho việc chỉnh sửa: yêu cầu phải có todo
   const AddEditTodoScreen.edit({super.key, required this.todo})
-      : isAddForm = false;
+    : isAddForm = false;
 
   @override
   ConsumerState<AddEditTodoScreen> createState() => _AddEditTodoScreenState();
@@ -34,7 +33,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
   // Dùng cho SingleTodo
   late DateTime _selectedDateTime;
   // Dùng cho RecurringTodoRule
-  late Set<int> _selectedWeekdays;
+  late Set<DayOfWeek> _selectedWeekdays;
   late TimeOfDay _selectedTime;
 
   @override
@@ -59,7 +58,9 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
       if (todo is SingleTodo) {
         _recurrenceType = RecurrenceType.daily;
         _selectedDateTime = todo.dateTime;
-        _selectedTime = TimeOfDay.fromDateTime(todo.dateTime); // Lấy time từ dateTime
+        _selectedTime = TimeOfDay.fromDateTime(
+          todo.dateTime,
+        ); // Lấy time từ dateTime
         _selectedWeekdays = {}; // Reset giá trị không dùng đến
       } else if (todo is RecurringTodoRule) {
         _recurrenceType = RecurrenceType.weekly;
@@ -130,7 +131,8 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         title: title,
         content: content,
         dateTime: _selectedDateTime,
-        isCompleted: widget.isAddForm ? false : (widget.todo! as SingleTodo).isCompleted,
+        isCompleted:
+            widget.isAddForm ? false : (widget.todo! as SingleTodo).isCompleted,
       );
       if (widget.isAddForm) {
         ref.read(todosProvider.notifier).addTodo(todoToSave);
@@ -140,7 +142,9 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
     } else {
       if (_selectedWeekdays.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vui lòng chọn ít nhất một ngày trong tuần.')),
+          const SnackBar(
+            content: Text('Vui lòng chọn ít nhất một ngày trong tuần.'),
+          ),
         );
         return;
       }
@@ -157,7 +161,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         ref.read(todosProvider.notifier).updateTodo(todoToSave);
       }
     }
-    
+
     Navigator.of(context).pop();
   }
 
@@ -187,7 +191,11 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
                   border: OutlineInputBorder(),
                   hintText: 'Ví dụ: Học bài Flutter',
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty) ? 'Vui lòng nhập tiêu đề' : null,
+                validator:
+                    (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Vui lòng nhập tiêu đề'
+                            : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -200,11 +208,19 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 24),
-              
+
               SegmentedButton<RecurrenceType>(
                 segments: const [
-                  ButtonSegment(value: RecurrenceType.daily, label: Text('Một lần'), icon: Icon(Icons.calendar_view_day)),
-                  ButtonSegment(value: RecurrenceType.weekly, label: Text('Hàng tuần'), icon: Icon(Icons.event_repeat)),
+                  ButtonSegment(
+                    value: RecurrenceType.daily,
+                    label: Text('Một lần'),
+                    icon: Icon(Icons.calendar_view_day),
+                  ),
+                  ButtonSegment(
+                    value: RecurrenceType.weekly,
+                    label: Text('Hàng tuần'),
+                    icon: Icon(Icons.event_repeat),
+                  ),
                 ],
                 selected: {_recurrenceType},
                 onSelectionChanged: (newSelection) {
@@ -228,7 +244,10 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
                 label: const Text('Lưu công việc'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -242,38 +261,48 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
     return ListTile(
       leading: const Icon(Icons.access_time_filled),
       title: const Text('Thời gian diễn ra'),
-      subtitle: Text(DateFormat('HH:mm - EEEE, dd/MM/yyyy', 'vi_VN').format(_selectedDateTime)),
+      subtitle: Text(
+        DateFormat(
+          'HH:mm - EEEE, dd/MM/yyyy',
+          'vi_VN',
+        ).format(_selectedDateTime),
+      ),
       trailing: const Icon(Icons.edit_calendar_outlined, size: 28),
       onTap: _presentDateTimePicker,
     );
   }
 
   Widget _buildWeeklyEventOptions() {
-    final weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Chọn các ngày trong tuần:', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Chọn các ngày trong tuần:',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
-          children: List.generate(7, (index) {
-            final day = index + 1; // 1=Mon, ..., 7=Sun
-            final isSelected = _selectedWeekdays.contains(day);
-            return FilterChip(
-              label: Text(weekdays[index]),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedWeekdays.add(day);
-                  } else {
-                    _selectedWeekdays.remove(day);
-                  }
-                });
-              },
-            );
-          }),
+          children:
+              DayOfWeek.values.map((day) {
+                // Lặp qua tất cả các giá trị của enum
+                final isSelected = _selectedWeekdays.contains(day);
+                return FilterChip(
+                  label: Text(day.vietnameseName), // Dùng extension để lấy tên
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedWeekdays.add(
+                          day,
+                        ); // Thêm/xóa chính giá trị enum
+                      } else {
+                        _selectedWeekdays.remove(day);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
         ),
         const SizedBox(height: 8),
         ListTile(

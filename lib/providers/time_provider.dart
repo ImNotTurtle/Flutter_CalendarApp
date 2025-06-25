@@ -6,9 +6,9 @@ class TimeNotifier extends StateNotifier<DateTime> {
   late final Timer _timer;
 
   TimeNotifier() : super(DateTime.now()) {
-    // Tạo một timer chạy mỗi 10 phút
-    _timer = Timer.periodic(const Duration(minutes: 10), (timer) {
-      // Cứ sau 10 phút, cập nhật state với thời gian mới nhất
+    // Tạo một timer chạy mỗi 5 phút
+    _timer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      // Cứ sau 5 phút, cập nhật state với thời gian mới nhất
       // Bất kỳ widget nào "watch" provider này sẽ được build lại
       state = DateTime.now();
     });

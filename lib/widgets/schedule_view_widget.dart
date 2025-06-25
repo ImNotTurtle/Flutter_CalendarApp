@@ -1,12 +1,12 @@
 import 'package:calendar_app/data/todo_data_source.dart';
 import 'package:calendar_app/models/todo_instance.dart';
+import 'package:calendar_app/providers/calendar_provider.dart';
 import 'package:calendar_app/providers/time_provider.dart';
-import 'package:calendar_app/providers/todo_list_provider.dart';
 import 'package:calendar_app/shared_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class ScheduleViewWidget extends ConsumerStatefulWidget {
   const ScheduleViewWidget({super.key});
@@ -19,7 +19,6 @@ class ScheduleViewWidget extends ConsumerStatefulWidget {
 
 class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
   final CalendarController _calendarController = CalendarController();
-  String _headerText = '';
 
   @override
   Widget build(BuildContext context) {
@@ -28,19 +27,23 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
     final selectedRange = ref.watch(selectedDateRangeProvider);
     final DateTime now = ref.watch(currentTimeProvider);
 
+    // 1. Lắng nghe khi người dùng chọn một khoảng mới ở panel trái
     ref.listen<DateTimeRange?>(selectedDateRangeProvider, (previous, next) {
+      // Khi có khoảng mới, reset trang đang xem về ngày bắt đầu của khoảng đó
+      ref.read(schedulePageDateProvider.notifier).state = next?.start;
+    });
+
+    // 2. Lắng nghe trang đang xem để ra lệnh cho controller nhảy đến
+    ref.listen<DateTime?>(schedulePageDateProvider, (previous, next) {
       if (next != null) {
-        _calendarController.displayDate = next.start;
+        _calendarController.displayDate = next;
       }
     });
 
-    // <<< Tính toán số ngày hiển thị>>>
-    final int dayCount;
-    if (selectedRange == null) {
-      dayCount = 1; // Mặc định hiển thị 1 ngày
-    } else {
-      dayCount = selectedRange.end.difference(selectedRange.start).inDays + 1;
-    }
+    // <<< Tính toán view dựa trên số ngày được chọn >>>
+    final int dayCount =
+        selectedRange == null ? 1 : selectedRange.duration.inDays + 1;
+    final int displayDayCount = dayCount > 7 ? 7 : dayCount;
 
     // <<< Tạo một "vùng" đặc biệt nổi bật cho thời gian hiện tại >>>
     final TimeRegion currentTimeRegion = TimeRegion(
@@ -61,7 +64,8 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
 
     return Column(
       children: [
-        _buildCalendarHeader(),
+        _buildScheduleToolbar(selectedRange, displayDayCount),
+
         const Divider(),
         Expanded(
           child: SfCalendar(
@@ -70,28 +74,7 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
             controller: _calendarController,
             view: CalendarView.week,
             headerHeight: 0,
-            allowViewNavigation: true,
-            onViewChanged: (ViewChangedDetails viewChangedDetails) {
-              // Cập nhật ngày cho provider và text cho header tùy chỉnh
-              final firstVisibleDate = viewChangedDetails.visibleDates.first;
-              Future.delayed(const Duration(milliseconds: 50), () {
-                // Dùng post frame callback để tránh lỗi setState trong lúc build
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _headerText = capitalizeFirstLetter(
-                        DateFormat(
-                          'MMMM, yyyy',
-                          'vi_VN',
-                        ).format(firstVisibleDate),
-                      );
-                    });
-                    ref.read(displayedDateProvider.notifier).state =
-                        firstVisibleDate;
-                  }
-                });
-              });
-            },
+            allowViewNavigation: false,
             todayHighlightColor: Colors.blue,
             // Dữ liệu sẽ được lấy từ đây
             dataSource: todoDataSource,
@@ -103,7 +86,7 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
             specialRegions: [currentTimeRegion],
             // Cấu hình cho giao diện timeline
             timeSlotViewSettings: TimeSlotViewSettings(
-              numberOfDaysInView: dayCount,
+              numberOfDaysInView: displayDayCount,
               timeInterval: Duration(minutes: 30),
               startHour: 0,
               endHour: 24,
@@ -182,38 +165,99 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
     );
   }
 
-  // <<< TÍNH NĂNG MỚI: Hàm xây dựng header tùy chỉnh >>>
-  Widget _buildCalendarHeader() {
+  Widget _buildScheduleToolbar(
+    DateTimeRange? selectedRange,
+    int displayDayCount,
+  ) {
+    final selectedRange = ref.watch(selectedDateRangeProvider);
+    final currentPageDate =
+        ref.watch(schedulePageDateProvider) ?? selectedRange?.start;
+
+    // --- Logic để bật/tắt các nút điều hướng ---
+    bool canNavigateBackward = false;
+    bool canNavigateForward = false;
+    // Biến để xác định có đang xem một ngày duy nhất hay không
+    bool isSingleDayView = true;
+
+    if (selectedRange != null && currentPageDate != null) {
+      isSingleDayView = selectedRange.duration.inDays == 0;
+
+      final displayDayCount =
+          isSingleDayView
+              ? 1
+              : (selectedRange.duration.inDays + 1 > 7
+                  ? 7
+                  : selectedRange.duration.inDays + 1);
+
+      canNavigateBackward = !isSameDay(currentPageDate, selectedRange.start);
+
+      final nextPageStart = currentPageDate.add(
+        Duration(days: displayDayCount),
+      );
+      canNavigateForward =
+          nextPageStart.isBefore(selectedRange.end) ||
+          isSameDay(nextPageStart, selectedRange.end);
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Nút quay về tuần/ngày trước
+          // Nút lùi trang
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            tooltip: 'Tuần trước',
-            onPressed: () {
-              // Ra lệnh cho controller quay về trước
-              _calendarController.backward!();
-            },
+            tooltip: 'Trang trước',
+            onPressed:
+                !canNavigateBackward
+                    ? null
+                    : () {
+                      final newPageDate = currentPageDate!.subtract(
+                        Duration(days: displayDayCount),
+                      );
+                      ref.read(schedulePageDateProvider.notifier).state =
+                          newPageDate;
+                    },
           ),
-          // Hiển thị tháng và năm
-          Text(
-            _headerText,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          // Nút đi tới tuần/ngày tiếp theo
+          // Nút tiến trang
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            tooltip: 'Tuần sau',
-            onPressed: () {
-              // Ra lệnh cho controller đi tới
-              _calendarController.forward!();
-            },
+            tooltip: 'Trang sau',
+            onPressed:
+                !canNavigateForward
+                    ? null
+                    : () {
+                      final newPageDate = currentPageDate!.add(
+                        Duration(days: displayDayCount),
+                      );
+                      ref.read(schedulePageDateProvider.notifier).state =
+                          newPageDate;
+                    },
           ),
+          const Spacer(),
+          const Spacer(),
+
+          // <<< TÍNH NĂNG MỚI: Nút Xem cả tuần >>>
+          // Chỉ hiển thị nút này khi đang xem một ngày duy nhất
+          if (isSingleDayView)
+            TextButton.icon(
+              icon: const Icon(Icons.view_week_outlined),
+              label: const Text('Xem cả tuần'),
+              onPressed: () {
+                final currentDay = selectedRange?.start ?? DateTime.now();
+                // Tính toán ngày đầu tuần (Thứ 2)
+                final startOfWeek = currentDay.subtract(
+                  Duration(days: currentDay.weekday - 1),
+                );
+                // Tính toán ngày cuối tuần (Chủ Nhật)
+                final endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+                // Cập nhật lại provider với khoảng thời gian là cả tuần
+                ref
+                    .read(selectedDateRangeProvider.notifier)
+                    .state = DateTimeRange(start: startOfWeek, end: endOfWeek);
+              },
+            ),
+          // Nút chuyển đổi Ngày/Tuần vẫn có thể giữ lại nếu muốn
         ],
       ),
     );

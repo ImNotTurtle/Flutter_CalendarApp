@@ -14,8 +14,10 @@ final lightColorScheme = ColorScheme.light(
 );
 
 final darkColorScheme = ColorScheme.dark(
-  primary: Color(0xFF58A6FF),
-  secondary: Color(0xFF50E3C2),
+  // primary: Color(0xFF58A6FF),
+  primary: Color(0xFF03DAC6),
+  // secondary: Color(0xFF50E3C2),
+  secondary: Color(0xFFBB86FC),
   surface: Color(0xFF1E1E1E),
   // background: Color(0xFF121212),
   error: Color(0xFFFF6B6B),
@@ -24,4 +26,11 @@ final darkColorScheme = ColorScheme.dark(
   onSurface: Color(0xFFEAEAEA),
   // onBackground: Color(0xFFEAEAEA),
   onError: Colors.black,
+);
+
+final darkTheme = ThemeData(
+  colorScheme: darkColorScheme,
+  scaffoldBackgroundColor: Color(0xFF121212),
+  cardColor: Color(0xFF1E1E1E),
+  
 );

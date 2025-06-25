@@ -1,10 +1,10 @@
-// LỚP CON 2: "Luật" lặp lại hàng tuần
 import 'package:calendar_app/models/base_todo.dart';
+import 'package:calendar_app/models/day_of_week.dart';
 import 'package:flutter/material.dart';
 
 class RecurringTodoRule extends BaseTodo {
   final TimeOfDay timeOfDay; // Thời gian trong ngày (VD: 21:00)
-  final Set<int> daysOfWeek; // Các ngày trong tuần lặp lại (1=T2, 7=CN)
+  final Set<DayOfWeek> daysOfWeek; // Các ngày trong tuần lặp lại
 
   RecurringTodoRule({
     required super.title,
@@ -20,7 +20,7 @@ class RecurringTodoRule extends BaseTodo {
     String? title,
     String? content,
     TimeOfDay? timeOfDay,
-    Set<int>? daysOfWeek,
+    Set<DayOfWeek>? daysOfWeek,
   }) {
     return RecurringTodoRule(
       id: id ?? this.id,

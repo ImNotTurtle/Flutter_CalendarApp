@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         Locale('en'), // Tiếng Anh dự phòng
       ],
       locale: const Locale('vi'), // Thiết lập locale mặc định là Tiếng Việt
-      theme: ThemeData(colorScheme: darkColorScheme),
+      theme: darkTheme,
       home: const HomeScreen(),
     );
   }
