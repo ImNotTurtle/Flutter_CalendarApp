@@ -28,4 +28,26 @@ class SingleTodo extends BaseTodo {
       isCompleted: isCompleted ?? this.isCompleted,
     );
   }
+
+    // Hàm chuyển object thành Map để gửi lên Supabase
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'content': content,
+      'recurrence_type': 'none',
+      'date_time': dateTime.toIso8601String(),
+      'is_completed': isCompleted,
+    };
+  }
+
+  // Hàm tạo object từ Map lấy về từ Supabase
+  factory SingleTodo.fromMap(Map<String, dynamic> map) {
+    return SingleTodo(
+      id: map['id'],
+      title: map['title'],
+      content: map['content'],
+      dateTime: DateTime.parse(map['date_time']),
+      isCompleted: map['is_completed'] ?? false,
+    );
+  }
 }

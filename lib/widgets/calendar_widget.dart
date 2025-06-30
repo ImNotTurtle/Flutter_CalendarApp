@@ -203,7 +203,6 @@ class _CalendarWidgetState extends ConsumerState<CalendarWidget> {
               start: today,
               end: today,
             );
-            // ref.read(calendarViewProvider.notifier).state = CalendarView.day;
           },
         ),
         TextButton.icon(

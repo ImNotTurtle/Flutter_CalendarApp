@@ -10,4 +10,6 @@ abstract class BaseTodo {
 
   BaseTodo({required this.title, required this.content, String? id})
     : id = id ?? _uuid.v4();
+
+  Map<String, dynamic> toMap();
 }

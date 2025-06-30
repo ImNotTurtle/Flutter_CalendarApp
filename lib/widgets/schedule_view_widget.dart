@@ -2,6 +2,7 @@ import 'package:calendar_app/data/todo_data_source.dart';
 import 'package:calendar_app/models/todo_instance.dart';
 import 'package:calendar_app/providers/calendar_provider.dart';
 import 'package:calendar_app/providers/time_provider.dart';
+import 'package:calendar_app/services/timezone_service.dart';
 import 'package:calendar_app/shared_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,8 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
   @override
   Widget build(BuildContext context) {
     final instances = ref.watch(visibleInstancesProvider);
-    final todoDataSource = TodoDataSource(instances);
+    final timezoneManager = ref.read(timezoneManagerProvider);
+    final todoDataSource = TodoDataSource(instances, timezoneManager);
     final selectedRange = ref.watch(selectedDateRangeProvider);
     final DateTime now = ref.watch(currentTimeProvider);
 

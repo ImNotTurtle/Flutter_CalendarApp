@@ -1,10 +1,12 @@
 import 'package:calendar_app/models/todo_instance.dart';
+import 'package:calendar_app/services/timezone_service.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 class TodoDataSource extends CalendarDataSource {
+  final TimezoneManager timeManager;
   // Constructor nhận vào danh sách các TodoInstance
-  TodoDataSource(List<TodoInstance> source) {
+  TodoDataSource(List<TodoInstance> source, this.timeManager) {
     appointments = source;
   }
 
@@ -12,17 +14,17 @@ class TodoDataSource extends CalendarDataSource {
 
   @override
   DateTime getStartTime(int index) {
-    // Lấy thời gian bắt đầu của sự kiện
-    return appointments![index].concreteDateTime;
+    final utcTime = appointments![index].concreteDateTime;
+    // <<< SỬA LỖI: Chuyển UTC từ database sang giờ Local để hiển thị >>>
+    return timeManager.toLocal(utcTime);
   }
 
   @override
   DateTime getEndTime(int index) {
-    // Model chưa có 'thời lượng', nên ta mặc định mỗi todo kéo dài 1 tiếng 
-    // (chỉ thêm 59 phút 59 giây để tránh edge case khi todo diễn ra vào lúc 23h và kết thúc vào đúng 24h)
-    return appointments![index].concreteDateTime.add(
-      const Duration(minutes: 59, seconds: 59),
-    );
+    // Thời lượng mặc định là 1 tiếng (hoặc 59m59s để tránh lỗi render)
+    final utcTime = appointments![index].concreteDateTime.add(const Duration(minutes: 59, seconds: 59));
+    // <<< SỬA LỖI: Cũng phải chuyển thời gian kết thúc sang giờ Local >>>
+    return timeManager.toLocal(utcTime);
   }
 
   @override
