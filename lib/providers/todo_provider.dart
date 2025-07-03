@@ -1,82 +1,135 @@
+import 'package:calendar_app/models/day_of_week.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:collection/collection.dart';
+
 import 'package:calendar_app/models/base_todo.dart';
+import 'package:calendar_app/models/recurring_todo.dart';
 import 'package:calendar_app/models/single_todo.dart';
 import 'package:calendar_app/providers/service_provider.dart';
-import 'package:collection/collection.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TodosNotifier extends AsyncNotifier<List<BaseTodo>> {
-  // `build` là hàm khởi tạo. Nó gọi service để lấy dữ liệu ban đầu.
-  @override
-  Future<List<BaseTodo>> build() async {
-    return ref.read(todoServiceProvider).fetchTodos();
+
+  // --- HÀM HELPER CHUYỂN ĐỔI MÚI GIỜ (LOGIC TẬP TRUNG TẠI ĐÂY) ---
+
+  BaseTodo _convertToUtc(BaseTodo localTodo) {
+    if (localTodo is SingleTodo) {
+      return localTodo.copyWith(dateTime: localTodo.dateTime.toUtc());
+    }
+    if (localTodo is RecurringTodoRule) {
+      if (localTodo.daysOfWeek.isEmpty) return localTodo;
+      
+      final sampleLocalDay = localTodo.daysOfWeek.first;
+      final now = DateTime.now();
+      var tempDate = DateTime(now.year, now.month, now.day, localTodo.timeOfDay.hour, localTodo.timeOfDay.minute);
+      
+      while (tempDate.weekday != sampleLocalDay.asWeekday) {
+        tempDate = tempDate.add(const Duration(days: 1));
+      }
+      
+      final sampleUtcDateTime = tempDate.toUtc();
+      final utcTime = TimeOfDay.fromDateTime(sampleUtcDateTime);
+      final dayOffset = sampleUtcDateTime.day - tempDate.day;
+
+      final utcDays = localTodo.daysOfWeek.map((localDay) {
+        final utcWeekdayInt = (localDay.asWeekday - 1 + dayOffset + 7) % 7 + 1;
+        return DayOfWeek.values.firstWhere((d) => d.asWeekday == utcWeekdayInt);
+      }).toSet();
+      
+      return localTodo.copyWith(timeOfDay: utcTime, daysOfWeek: utcDays);
+    }
+    return localTodo;
   }
 
-  // Phương thức addTodo giờ chỉ gọi service và làm mới lại state
-  Future<void> addTodo(BaseTodo todo) async {
-    // Đặt state về loading để UI có thể hiển thị chỉ báo
-    state = const AsyncValue.loading();
-    // Dùng try-catch để xử lý lỗi
-    try {
-      await ref.read(todoServiceProvider).addTodo(todo);
-    } finally {
-      // Dù thành công hay thất bại, làm mới lại provider để fetch dữ liệu mới nhất
-      ref.invalidateSelf();
+  BaseTodo _convertToLocal(BaseTodo utcTodo) {
+    if (utcTodo is SingleTodo) {
+      return utcTodo.copyWith(dateTime: utcTodo.dateTime.toLocal());
     }
+    if (utcTodo is RecurringTodoRule) {
+      if (utcTodo.daysOfWeek.isEmpty) return utcTodo;
+
+      final sampleUtcDay = utcTodo.daysOfWeek.first;
+      final now = DateTime.now().toUtc();
+      var tempDate = DateTime.utc(now.year, now.month, now.day, utcTodo.timeOfDay.hour, utcTodo.timeOfDay.minute);
+
+      while (tempDate.weekday != sampleUtcDay.asWeekday) {
+        tempDate = tempDate.add(const Duration(days: 1));
+      }
+
+      final localDateTime = tempDate.toLocal();
+      final localTime = TimeOfDay.fromDateTime(localDateTime);
+      final dayOffset = localDateTime.day - tempDate.day;
+
+      final localDays = utcTodo.daysOfWeek.map((utcDay) {
+        final localWeekdayInt = (utcDay.asWeekday - 1 + dayOffset + 7) % 7 + 1;
+        return DayOfWeek.values.firstWhere((d) => d.asWeekday == localWeekdayInt);
+      }).toSet();
+      
+      return utcTodo.copyWith(timeOfDay: localTime, daysOfWeek: localDays);
+    }
+    return utcTodo;
+  }
+  
+  // --- CÁC HÀM CHÍNH ---
+
+  @override
+  Future<List<BaseTodo>> build() async {
+    final todosFromDb = await ref.read(todoServiceProvider).fetchTodos();
+    // Chuyển đổi toàn bộ danh sách về giờ Local trước khi đưa vào state
+    return todosFromDb.map(_convertToLocal).toList();
+  }
+
+  Future<void> addTodo(BaseTodo todo) async {
+    final todoInUtc = _convertToUtc(todo);
+    await ref.read(todoServiceProvider).addTodo(todoInUtc);
+    ref.invalidateSelf();
   }
 
   Future<void> updateTodo(BaseTodo todo) async {
-    state = const AsyncValue.loading();
-    try {
-      await ref.read(todoServiceProvider).updateTodo(todo);
-    } finally {
-      ref.invalidateSelf();
-    }
+    final todoInUtc = _convertToUtc(todo);
+    await ref.read(todoServiceProvider).updateTodo(todoInUtc);
+    ref.invalidateSelf();
   }
 
   Future<void> removeTodo(String todoId) async {
-    state = const AsyncValue.loading();
-    try {
-      await ref.read(todoServiceProvider).removeTodo(todoId);
-    } finally {
-      ref.invalidateSelf();
-    }
+    await ref.read(todoServiceProvider).removeTodo(todoId);
+    ref.invalidateSelf();
   }
 
-  // Toggle cần tìm todo trước để biết trạng thái hiện tại
   Future<void> toggle(String todoId) async {
-    final todoToToggle = state.value?.firstWhereOrNull((t) => t.id == todoId);
-    if (todoToToggle == null || todoToToggle is! SingleTodo) return;
+     final previousState = await future;
+     final todoToToggle = previousState.firstWhereOrNull((t) => t.id == todoId);
+     if (todoToToggle == null || todoToToggle is! SingleTodo) return;
 
-    state = const AsyncValue.loading();
-    try {
-      await ref
-          .read(todoServiceProvider)
-          .toggleTodo(todoId, todoToToggle.isCompleted);
-    } finally {
-      ref.invalidateSelf();
-    }
+     final newTodos = [
+       for (final todo in previousState)
+         if (todo.id == todoId)
+           (todo as SingleTodo).copyWith(isCompleted: !todo.isCompleted)
+         else
+           todo
+     ];
+     state = AsyncValue.data(newTodos);
+
+     try {
+       await ref.read(todoServiceProvider).toggleTodo(todoId, todoToToggle.isCompleted);
+     } catch (e) {
+       state = AsyncValue.data(previousState);
+     }
   }
 }
 
+// ... các provider phụ thuộc khác giữ nguyên ...
 final todosProvider = AsyncNotifierProvider<TodosNotifier, List<BaseTodo>>(() {
   return TodosNotifier();
 });
 
-// Provider để tìm một Todo theo ID
 final todoByIdProvider = Provider.family<BaseTodo?, String>((ref, todoId) {
-  // Lắng nghe trạng thái bất đồng bộ của provider chính
   final asyncTodos = ref.watch(todosProvider);
-
-  // Dùng .when() để xử lý tất cả các trạng thái một cách an toàn
   return asyncTodos.when(
-    // Khi có dữ liệu, thực hiện tìm kiếm trên danh sách `allTodos`
     data: (allTodos) => allTodos.firstWhereOrNull((todo) => todo.id == todoId),
-
-    // Khi đang tải hoặc có lỗi, chúng ta không có dữ liệu để tìm, nên trả về null
     loading: () => null,
     error: (error, stackTrace) => null,
   );
 });
 
-// Provider quản lý các ID đang được chọn trong danh sách
 final selectedTodosProvider = StateProvider<Set<String>>((ref) => {});

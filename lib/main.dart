@@ -8,15 +8,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/*
+
+*/
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonkey);
 
   // <<< Khởi tạo local_notifier >>>
-  await localNotifier.setup(
-    appName: 'Lịch Công Việc',
-  );
+  await localNotifier.setup(appName: 'Lịch Công Việc');
 
   final container = ProviderContainer();
 
@@ -38,10 +40,7 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('vi'),
-        Locale('en'),
-      ],
+      supportedLocales: const [Locale('vi'), Locale('en')],
       locale: const Locale('vi'), // Thiết lập locale mặc định là Tiếng Việt
       theme: darkTheme,
       home: const HomeScreen(),

@@ -24,6 +24,8 @@ class TodoInstance {
     bool? isCompleted;
     DateTime concreteDateTime;
 
+    
+
     // Kiểm tra loại của "luật" gốc
     if (todoRule is SingleTodo) {
       // <<< SỬA LỖI: Dùng trực tiếp dateTime của SingleTodo để giữ nguyên độ chính xác >>>

@@ -2,7 +2,7 @@
 import 'package:calendar_app/models/base_todo.dart';
 
 class SingleTodo extends BaseTodo {
-  final DateTime dateTime; // <<< THAY ĐỔI: Giờ là một ngày giờ cụ thể
+  final DateTime dateTime;
   final bool isCompleted;
 
   SingleTodo({
@@ -29,7 +29,8 @@ class SingleTodo extends BaseTodo {
     );
   }
 
-    // Hàm chuyển object thành Map để gửi lên Supabase
+  // Hàm chuyển object thành Map để gửi lên Supabase
+  @override
   Map<String, dynamic> toMap() {
     return {
       'title': title,

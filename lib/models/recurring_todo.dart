@@ -14,7 +14,6 @@ class RecurringTodoRule extends BaseTodo {
     super.id,
   });
 
-  // <<< HÀM COPYWITH CHO RECURRINGTODORULE >>>
   RecurringTodoRule copyWith({
     String? id,
     String? title,
@@ -31,19 +30,21 @@ class RecurringTodoRule extends BaseTodo {
     );
   }
 
+  @override
   Map<String, dynamic> toMap() {
     // Chuyển đổi Set<DayOfWeek> thành List<int> để lưu trữ
-    final List<int> daysOfWeekAsInt = daysOfWeek.map((day) => day.asWeekday).toList();
+    final List<int> daysOfWeekAsInt =
+        daysOfWeek.map((day) => day.asWeekday).toList();
 
     return {
       // id và created_at sẽ được Supabase tự động tạo
       'title': title,
       'content': content,
       'recurrence_type': 'weekly', // Đánh dấu đây là luật lặp lại hàng tuần
-      
       // Chuyển TimeOfDay thành chuỗi 'HH:mm:ss' mà PostgreSQL có thể hiểu
-      'time_of_day': '${timeOfDay.hour.toString().padLeft(2, '0')}:${timeOfDay.minute.toString().padLeft(2, '0')}:00',
-      
+      'time_of_day':
+          '${timeOfDay.hour.toString().padLeft(2, '0')}:${timeOfDay.minute.toString().padLeft(2, '0')}:00',
+
       // Chuyển Set thành List để Supabase có thể lưu dưới dạng mảng (array)
       'days_of_week': daysOfWeekAsInt,
     };
@@ -52,12 +53,16 @@ class RecurringTodoRule extends BaseTodo {
   // <<< HÀM MỚI: Tạo Object Dart từ Map lấy về từ Supabase >>>
   factory RecurringTodoRule.fromMap(Map<String, dynamic> map) {
     // Lấy ra danh sách các số nguyên từ Supabase
-    final List<int> daysAsInt = (map['days_of_week'] as List<dynamic>).cast<int>();
+    final List<int> daysAsInt =
+        (map['days_of_week'] as List<dynamic>).cast<int>();
     // Chuyển đổi ngược lại thành Set<DayOfWeek>
-    final Set<DayOfWeek> daysOfWeekFromDb = daysAsInt.map((dayInt) {
-      return DayOfWeek.values.firstWhere((dayEnum) => dayEnum.asWeekday == dayInt);
-    }).toSet();
-    
+    final Set<DayOfWeek> daysOfWeekFromDb =
+        daysAsInt.map((dayInt) {
+          return DayOfWeek.values.firstWhere(
+            (dayEnum) => dayEnum.asWeekday == dayInt,
+          );
+        }).toSet();
+
     // Lấy ra chuỗi thời gian (ví dụ: '21:00:00') và phân tích nó
     final timeParts = (map['time_of_day'] as String).split(':');
 

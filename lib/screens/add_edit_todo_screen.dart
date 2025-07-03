@@ -11,13 +11,19 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 class AddEditTodoScreen extends ConsumerStatefulWidget {
   final BaseTodo? todo;
   final bool isAddForm;
+  final DateTime? initialDate;
 
   // Constructor cho việc thêm mới: không cần todo
-  const AddEditTodoScreen.add({super.key}) : isAddForm = true, todo = null;
+  const AddEditTodoScreen.add({super.key, this.initialDate})
+    : isAddForm = true,
+      todo = null;
 
   // Constructor cho việc chỉnh sửa: yêu cầu phải có todo
-  const AddEditTodoScreen.edit({super.key, required this.todo})
-    : isAddForm = false;
+  const AddEditTodoScreen.edit({
+    super.key,
+    required this.todo,
+    this.initialDate,
+  }) : isAddForm = false;
 
   @override
   ConsumerState<AddEditTodoScreen> createState() => _AddEditTodoScreenState();
@@ -45,7 +51,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
       // Chế độ Thêm: Lấy thời gian hiện tại làm mặc định
       _titleController = TextEditingController();
       _contentController = TextEditingController();
-      _selectedDateTime = DateTime.now();
+      _selectedDateTime = widget.initialDate ?? DateTime.now();
       _selectedTime = TimeOfDay.now();
       _recurrenceType = RecurrenceType.daily;
       _selectedWeekdays = {};
@@ -87,21 +93,23 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
     );
     if (pickedDate == null) return;
 
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
-    );
-    if (pickedTime == null) return;
-
-    setState(() {
-      _selectedDateTime = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
+    if (mounted) {
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
       );
-    });
+      if (pickedTime == null) return;
+
+      setState(() {
+        _selectedDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+      });
+    }
   }
 
   void _presentTimePicker() async {
@@ -148,6 +156,8 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         );
         return;
       }
+
+      // 1. Tạo object RecurringTodoRule với dữ liệu UTC
       final todoToSave = RecurringTodoRule(
         id: widget.isAddForm ? null : widget.todo!.id,
         title: title,
@@ -155,6 +165,8 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         daysOfWeek: _selectedWeekdays,
         timeOfDay: _selectedTime,
       );
+
+      // 2. Gửi đi Supabase
       if (widget.isAddForm) {
         ref.read(todosProvider.notifier).addTodo(todoToSave);
       } else {
@@ -167,6 +179,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print(_selectedDateTime);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isAddForm ? 'Thêm công việc' : 'Sửa công việc'),
