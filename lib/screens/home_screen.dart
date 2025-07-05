@@ -1,6 +1,3 @@
-import 'package:calendar_app/models/day_of_week.dart';
-import 'package:calendar_app/models/recurring_todo.dart';
-import 'package:calendar_app/providers/todo_provider.dart';
 import 'package:calendar_app/widgets/calendar_widget.dart';
 import 'package:calendar_app/widgets/schedule_view_widget.dart';
 import 'package:flutter/material.dart';
