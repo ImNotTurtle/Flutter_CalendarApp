@@ -1,7 +1,4 @@
-
-enum DayOfWeek{
-  mon, tues, wed, thus, fri, sat, sun
-}
+enum DayOfWeek { mon, tues, wed, thus, fri, sat, sun }
 
 extension DayOfWeekExtension on DayOfWeek {
   // Hàm để lấy tên hiển thị tiếng Việt
@@ -23,7 +20,6 @@ extension DayOfWeekExtension on DayOfWeek {
         return 'CN';
     }
   }
-
   // Hàm để lấy giá trị số tương ứng với DateTime.weekday (Thứ 2 = 1, ..., Chủ Nhật = 7)
   int get asWeekday {
     return index + 1;

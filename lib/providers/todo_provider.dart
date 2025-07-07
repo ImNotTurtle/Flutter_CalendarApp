@@ -1,4 +1,5 @@
 import 'package:calendar_app/models/day_of_week.dart';
+import 'package:calendar_app/providers/ui_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
@@ -133,3 +134,26 @@ final todoByIdProvider = Provider.family<BaseTodo?, String>((ref, todoId) {
 });
 
 final selectedTodosProvider = StateProvider<Set<String>>((ref) => {});
+
+
+final searchableListProvider = Provider<List<BaseTodo>>((ref) {
+  final searchQuery = ref.watch(todoSearchQueryProvider).toLowerCase();
+  final asyncTodos = ref.watch(todosProvider);
+
+  return asyncTodos.when(
+    data: (todos) {
+      // Nếu không có từ khóa tìm kiếm, trả về toàn bộ danh sách
+      if (searchQuery.isEmpty) {
+        return todos;
+      }
+      // Nếu có, lọc theo title hoặc content
+      return todos.where((todo) {
+        final titleMatch = todo.title.toLowerCase().contains(searchQuery);
+        final contentMatch = todo.content.toLowerCase().contains(searchQuery);
+        return titleMatch || contentMatch;
+      }).toList();
+    },
+    loading: () => [],
+    error: (e, s) => [],
+  );
+});

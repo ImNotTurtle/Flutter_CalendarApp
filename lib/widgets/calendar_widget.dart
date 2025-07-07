@@ -198,7 +198,7 @@ class _CalendarWidgetState extends ConsumerState<CalendarWidget> {
           icon: const Icon(Icons.today),
           label: const Text('Hôm nay'),
           onPressed: () {
-            final today = ref.read(currentTimeProvider).normalized;
+            final today = ref.read(systemTickProvider).normalized;
             ref.read(selectedDateRangeProvider.notifier).state = DateTimeRange(
               start: today,
               end: today,

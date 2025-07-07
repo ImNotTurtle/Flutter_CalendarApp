@@ -23,8 +23,29 @@ class TimeNotifier extends StateNotifier<DateTime> {
 }
 
 // Provider để cung cấp TimeNotifier cho toàn bộ ứng dụng
-final currentTimeProvider = StateNotifierProvider<TimeNotifier, DateTime>((
+final systemTickProvider = StateNotifierProvider<TimeNotifier, DateTime>((
   ref,
 ) {
   return TimeNotifier();
+});
+
+
+
+// Provider này cập nhật mỗi giây, chỉ dành cho các widget nhẹ, cần thời gian thực
+class SecondlyNotifier extends StateNotifier<DateTime> {
+  late final Timer _timer;
+  SecondlyNotifier() : super(DateTime.now()) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      state = DateTime.now();
+    });
+  }
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+}
+
+final secondlyTickProvider = StateNotifierProvider<SecondlyNotifier, DateTime>((ref) {
+  return SecondlyNotifier();
 });

@@ -179,7 +179,6 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print(_selectedDateTime);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isAddForm ? 'Thêm công việc' : 'Sửa công việc'),
