@@ -15,9 +15,12 @@ class TodoService {
       if (row['recurrence_type'] == 'none') {
         return SingleTodo.fromMap(row);
       } else {
+        // final c = RecurringTodoRule.fromMap(row);
+        // print('${c.title}, ${c.remindBefore}');
         return RecurringTodoRule.fromMap(row);
       }
     }).toList();
+
   }
 
   // Thêm một công việc mới

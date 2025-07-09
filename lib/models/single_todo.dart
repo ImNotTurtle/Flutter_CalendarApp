@@ -11,6 +11,7 @@ class SingleTodo extends BaseTodo {
     DateTime? dateTime,
     super.id,
     this.isCompleted = false,
+    super.remindBefore,
   }) : dateTime = dateTime ?? DateTime.now();
 
   SingleTodo copyWith({
@@ -19,6 +20,7 @@ class SingleTodo extends BaseTodo {
     String? content,
     DateTime? dateTime,
     bool? isCompleted,
+    Duration? remindBefore,
   }) {
     return SingleTodo(
       id: id ?? this.id,
@@ -26,6 +28,7 @@ class SingleTodo extends BaseTodo {
       content: content ?? this.content,
       dateTime: dateTime ?? this.dateTime,
       isCompleted: isCompleted ?? this.isCompleted,
+      remindBefore: remindBefore ?? this.remindBefore,
     );
   }
 
@@ -38,6 +41,7 @@ class SingleTodo extends BaseTodo {
       'recurrence_type': 'none',
       'date_time': dateTime.toIso8601String(),
       'is_completed': isCompleted,
+      'remind_before': remindBefore?.inMinutes,
     };
   }
 
@@ -49,6 +53,25 @@ class SingleTodo extends BaseTodo {
       content: map['content'],
       dateTime: DateTime.parse(map['date_time']),
       isCompleted: map['is_completed'] ?? false,
+      remindBefore:
+          map['remind_before'] != null
+              ? _parseDuration(map['remind_before'])
+              : null,
     );
   }
+}
+
+Duration? _parseDuration(dynamic minutes) {
+  if (minutes == null) return null;
+
+  if (minutes is int) {
+    return Duration(minutes: minutes);
+  }
+  if (minutes is String) {
+    if (int.tryParse(minutes) != null) {
+      return Duration(minutes: int.parse(minutes));
+    }
+  }
+
+  return null;
 }

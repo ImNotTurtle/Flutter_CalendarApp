@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:calendar_app/models/day_of_week.dart';
 import 'package:calendar_app/models/recurring_todo.dart';
 import 'package:calendar_app/models/single_todo.dart';
@@ -6,7 +5,6 @@ import 'package:calendar_app/providers/todo_provider.dart';
 import 'package:calendar_app/utils/date_time_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/todo_instance.dart';
-import 'calendar_provider.dart';
 
 // Một class đơn giản để chứa thông tin cho status bar
 class NextNotificationInfo {

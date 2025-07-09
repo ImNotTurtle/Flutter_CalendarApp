@@ -19,7 +19,7 @@ class _ScheduleViewWidgetState extends ConsumerState<ScheduleViewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Chỉ lắng nghe state, không tính toán logic phức tạp ở đây
+    // 1. Lắng nghe sự thay đổi
     final instances = ref.watch(visibleInstancesProvider);
     final selectedRange = ref.watch(selectedDateRangeProvider);
     final todoDataSource = TodoDataSource(instances);

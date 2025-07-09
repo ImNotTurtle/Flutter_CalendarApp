@@ -12,14 +12,15 @@ class RecurringTodoRule extends BaseTodo {
     required this.timeOfDay,
     required this.daysOfWeek,
     super.id,
+    super.remindBefore,
   });
-
   RecurringTodoRule copyWith({
     String? id,
     String? title,
     String? content,
     TimeOfDay? timeOfDay,
     Set<DayOfWeek>? daysOfWeek,
+    Duration? remindBefore,
   }) {
     return RecurringTodoRule(
       id: id ?? this.id,
@@ -27,6 +28,7 @@ class RecurringTodoRule extends BaseTodo {
       content: content ?? this.content,
       timeOfDay: timeOfDay ?? this.timeOfDay,
       daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      remindBefore: remindBefore ?? this.remindBefore,
     );
   }
 
@@ -47,6 +49,7 @@ class RecurringTodoRule extends BaseTodo {
 
       // Chuyển Set thành List để Supabase có thể lưu dưới dạng mảng (array)
       'days_of_week': daysOfWeekAsInt,
+      'remind_before': remindBefore?.inMinutes,
     };
   }
 
@@ -62,7 +65,6 @@ class RecurringTodoRule extends BaseTodo {
             (dayEnum) => dayEnum.asWeekday == dayInt,
           );
         }).toSet();
-
     // Lấy ra chuỗi thời gian (ví dụ: '21:00:00') và phân tích nó
     final timeParts = (map['time_of_day'] as String).split(':');
 
@@ -75,6 +77,25 @@ class RecurringTodoRule extends BaseTodo {
         minute: int.parse(timeParts[1]),
       ),
       daysOfWeek: daysOfWeekFromDb,
+      remindBefore:
+          map['remind_before'] != null
+              ? _parseDuration(map['remind_before'])
+              : null,
     );
   }
+}
+
+Duration? _parseDuration(dynamic minutes) {
+  if (minutes == null) return null;
+
+  if (minutes is int) {
+    return Duration(minutes: minutes);
+  }
+  if (minutes is String) {
+    if (int.tryParse(minutes) != null) {
+      return Duration(minutes: int.parse(minutes));
+    }
+  }
+
+  return null;
 }

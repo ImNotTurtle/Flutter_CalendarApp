@@ -8,6 +8,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
+// Các tùy chọn cho người dùng
+final Map<String, Duration> _reminderOptions = {
+  'Đúng giờ': Duration.zero,
+  'Trước 5 phút': const Duration(minutes: 5),
+  'Trước 15 phút': const Duration(minutes: 15),
+  'Trước 30 phút': const Duration(minutes: 30),
+  'Trước 1 giờ': const Duration(hours: 1),
+  'Trước 1 ngày': const Duration(days: 1),
+};
+
 class AddEditTodoScreen extends ConsumerStatefulWidget {
   final BaseTodo? todo;
   final bool isAddForm;
@@ -35,12 +45,14 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
   late TextEditingController _contentController;
 
   // --- State variables cho form ---
+  // biến kiểm soát kiểu thông báo theo ngày (single todo) / theo tuần (recurring todo)
   RecurrenceType _recurrenceType = RecurrenceType.daily;
   // Dùng cho SingleTodo
   late DateTime _selectedDateTime;
   // Dùng cho RecurringTodoRule
   late Set<DayOfWeek> _selectedWeekdays;
   late TimeOfDay _selectedTime;
+  Duration? _selectedRemindBefore = Duration.zero;
 
   @override
   void initState() {
@@ -55,11 +67,13 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
       _selectedTime = TimeOfDay.now();
       _recurrenceType = RecurrenceType.daily;
       _selectedWeekdays = {};
+      _selectedRemindBefore = Duration.zero;
     } else {
       // Chế độ Sửa: Lấy dữ liệu từ `widget.todo`
       final todo = widget.todo!;
       _titleController = TextEditingController(text: todo.title);
       _contentController = TextEditingController(text: todo.content);
+      _selectedRemindBefore = widget.todo?.remindBefore ?? Duration.zero;
 
       if (todo is SingleTodo) {
         _recurrenceType = RecurrenceType.daily;
@@ -141,6 +155,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         dateTime: _selectedDateTime,
         isCompleted:
             widget.isAddForm ? false : (widget.todo! as SingleTodo).isCompleted,
+        remindBefore: _selectedRemindBefore,
       );
       if (widget.isAddForm) {
         ref.read(todosProvider.notifier).addTodo(todoToSave);
@@ -164,6 +179,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         content: content,
         daysOfWeek: _selectedWeekdays,
         timeOfDay: _selectedTime,
+        remindBefore: _selectedRemindBefore,
       );
 
       // 2. Gửi đi Supabase
@@ -249,6 +265,26 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
               else
                 _buildWeeklyEventOptions(),
 
+              const SizedBox(height: 32),
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Nhắc nhở'),
+                trailing: DropdownButton<Duration>(
+                  value: _selectedRemindBefore,
+                  items:
+                      _reminderOptions.entries.map((entry) {
+                        return DropdownMenuItem<Duration>(
+                          value: entry.value,
+                          child: Text(entry.key),
+                        );
+                      }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedRemindBefore = newValue;
+                    });
+                  },
+                ),
+              ),
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: _submitTodo,
