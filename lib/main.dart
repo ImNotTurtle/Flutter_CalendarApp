@@ -1,49 +1,25 @@
-import 'package:calendar_app/providers/notification_provider.dart';
-import 'package:calendar_app/screens/home_screen.dart';
-import 'package:calendar_app/secret.dart';
-import 'package:calendar_app/theme.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_notifier/local_notifier.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'main_web.dart' as web_app;
+import 'main_desktop.dart' as desktop_app;
 
-/*
+// --- BIẾN ĐIỀU KHIỂN ---
+// Thay đổi giá trị này để chạy phiên bản tương ứng trong lúc phát triển.
+// Các giá trị hợp lệ: 'web', 'desktop'
+// const String environment = 'desktop';
+// build: flutter build windows -t lib/main_desktop.dart
+const String environment = 'web';
+// build: flutter build web -t lib/main_web.dart
 
-*/
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonkey);
-
-  // <<< Khởi tạo local_notifier >>>
-  await localNotifier.setup(appName: 'Lịch Công Việc');
-
-  final container = ProviderContainer();
-
-  // Kích hoạt observer để bắt đầu lên lịch thông báo
-  container.listen(calendarObserverProvider, (_, __) {});
-
-  runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Lịch Tiếng Việt',
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('vi'), Locale('en')],
-      locale: const Locale('vi'), // Thiết lập locale mặc định là Tiếng Việt
-      theme: darkTheme,
-      home: const HomeScreen(),
-    );
+void main() {
+  // Dựa vào biến `environment` để gọi đúng hàm main() tương ứng
+  switch (environment) {
+    case 'web':
+      print('--- Running WEB version ---');
+      web_app.main();
+      break;
+    case 'desktop':
+    default:
+      print('--- Running DESKTOP version ---');
+      desktop_app.main();
+      break;
   }
 }

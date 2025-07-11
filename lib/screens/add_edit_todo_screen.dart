@@ -200,6 +200,7 @@ class _AddEditTodoScreenState extends ConsumerState<AddEditTodoScreen> {
         title: Text(widget.isAddForm ? 'Thêm công việc' : 'Sửa công việc'),
         actions: [
           IconButton(
+            tooltip: 'Lưu công việc',
             icon: const Icon(Icons.save_alt_outlined),
             onPressed: _submitTodo,
           ),
